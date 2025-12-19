@@ -1,29 +1,40 @@
 import AudioFile from "../models/AudioFile.js";
 import fs from "fs";
+import path from "path";
 
-// Upload Audio Handler
+// ==========================================
+// 1. UPLOAD AUDIO (With MIME Type Fix)
+// ==========================================
 export const uploadAudio = async (req, res) => {
   try {
-    // 1. Validation: Check if a file was actually sent
+    // A. Validation: Check if a file was actually sent
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: "No audio file uploaded" });
     }
 
     const file = req.files[0];
-    console.log(`Processing Upload: ${file.originalname} (${file.mimetype})`);
 
-    // 2. Save to Database (WITH CRITICAL METADATA)
+    let cleanMimeType = file.mimetype;
+    if (cleanMimeType === "application/octet-stream") {
+      const ext = path.extname(file.originalname).toLowerCase();
+      if (ext === ".mp3") cleanMimeType = "audio/mp3";
+      if (ext === ".wav") cleanMimeType = "audio/wav";
+      if (ext === ".m4a") cleanMimeType = "audio/m4a";
+    }
+
+    console.log(`Processing Upload: ${file.originalname}`);
+    console.log(`Detected Type: ${file.mimetype} -> Saved as: ${cleanMimeType}`);
+
+    // C. Save to Database
     const audio = await AudioFile.create({
       user_id: req.user._id,
       file_path: file.path,
       original_name: file.originalname,
-      
-      // FIX: Saving these enables Gemini to read the file later
-      mimetype: file.mimetype, 
+      mimetype: cleanMimeType,
       size: file.size
     });
 
-    // 3. Respond to Client
+    // D. Respond to Client
     return res.status(201).json({
       message: "Audio uploaded successfully",
       audio: {
@@ -41,7 +52,9 @@ export const uploadAudio = async (req, res) => {
   }
 };
 
-// Get Single Audio Details
+// ==========================================
+// 2. GET SINGLE AUDIO DETAILS
+// ==========================================
 export const getAudio = async (req, res) => {
   try {
     const { audio_id } = req.params;
@@ -75,12 +88,13 @@ export const getAudio = async (req, res) => {
   }
 };
 
-// Delete Audio Handler
+// ==========================================
+// 3. DELETE AUDIO
+// ==========================================
 export const deleteAudio = async (req, res) => {
   try {
     const { audio_id } = req.params;
-    
-    // Find the record
+    // Find the record and ensure it belongs to the user
     const audio = await AudioFile.findOne({ _id: audio_id, user_id: req.user._id });
     if (!audio) {
       return res.status(404).json({ message: "Audio not found or unauthorized" });
@@ -88,7 +102,11 @@ export const deleteAudio = async (req, res) => {
 
     // 1. Delete file from Disk
     if (fs.existsSync(audio.file_path)) {
-      fs.unlinkSync(audio.file_path);
+      try {
+        fs.unlinkSync(audio.file_path);
+      } catch (e) {
+        console.warn("Could not delete file from disk (might be already gone):", e.message);
+      }
     }
 
     // 2. Delete record from DB
