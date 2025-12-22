@@ -5,7 +5,6 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import authRoutes from "./routes/authRoutes.js";
-import audioRoutes from "./routes/audioRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 
@@ -16,7 +15,6 @@ app.use(express.json());
 connectDB();
 
 app.use("/auth", authRoutes);
-app.use("/audio", audioRoutes);
 app.use("/report", reportRoutes);
 app.use("/chat", chatRoutes);
 
