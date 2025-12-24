@@ -7,6 +7,7 @@ dotenv.config();
 import authRoutes from "./routes/authRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import disputeRoutes from "./routes/disputeRoutes.js";
 
 const app = express();
 app.use(cors());
@@ -17,6 +18,7 @@ connectDB();
 app.use("/auth", authRoutes);
 app.use("/report", reportRoutes);
 app.use("/chat", chatRoutes);
+app.use("/dispute", disputeRoutes);
 
 app.get("/", (req, res) => {
   res.send("API is working");
